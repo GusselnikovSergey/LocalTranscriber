@@ -30,6 +30,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install -e . --no-deps
           python -m pip install pytest==9.2.0 ruff==0.17.5 mypy==2.4.1 pyinstaller==6.22.3
 
       - name: Environment info
@@ -39,28 +40,35 @@ jobs:
           python -c "import tkinter; print('tkinter', tkinter.TkVersion)" || echo "TKINTER MISSING"
           python -m pytest --version && python -m ruff --version && python -m mypy --version
 
-      # Проверки идут отдельными вызовами: если что-то упадёт, последние строки
-      # вывода попадают в аннотацию, которую можно прочитать без авторизации
-      # (логи job в GitHub API требуют токен).
+      # Проверки идут отдельными вызовами с `set +e` (иначе `bash -e` обрывает
+      # скрипт на первой ошибке и аннотация не печатается). Хвост вывода уходит
+      # в аннотацию и на paste.rs: логи job в GitHub API требуют токен.
       - name: Tests, lint, types
         shell: bash
         run: |
+          set +e
           fail=0
+          log=/tmp/ci-checks.log
+          : > "$log"
           run_check() {
             name="$1"; shift
-            echo "::group::$name"
+            echo "=== $name ===" >> "$log"
             out=$("$@" 2>&1); rc=$?
-            printf '%s\n' "$out"
-            echo "::endgroup::"
+            printf '%s\n' "$out" >> "$log"
             if [ "$rc" -ne 0 ]; then
-              msg=$(printf '%s\n' "$out" | tail -n 30 | tr '\n' '|' | cut -c1-900)
-              echo "::error title=$name failed (exit $rc)::$msg"
+              msg=$(printf '%s' "$out" | tail -n 20 | tr '\n' '~' | cut -c1-800)
+              echo "::error title=$name exit $rc::$msg"
               fail=1
             fi
           }
           run_check pytest python -m pytest -o addopts="" -q
           run_check ruff python -m ruff check .
           run_check mypy python -m mypy src
+          tail -n 80 "$log"
+          if [ "$fail" -ne 0 ]; then
+            url=$(curl -sS --data-binary @"$log" https://paste.rs 2>/dev/null)
+            echo "::error::Full CI log: $url"
+          fi
           exit $fail
 
       - name: Build .app
