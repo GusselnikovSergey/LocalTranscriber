@@ -15,13 +15,13 @@ permissions:
 
 jobs:
   build:
-    # macOS 14 в GitHub Actions снят с поддержки 02.11.2026; macos-15 — arm64 GA.
+    # macOS 14 в GitHub Actions снят с поддержки 02.11.2026; macos-15 — arm64.
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
@@ -32,11 +32,36 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pytest==9.2.0 ruff==0.17.5 mypy==2.4.1 pyinstaller==6.22.3
 
-      - name: Tests, lint, types
+      - name: Environment info
         run: |
-          python -m pytest -o addopts="" -q
-          python -m ruff check .
-          python -m mypy src
+          python -VV
+          python -c "import sys, sysconfig; print(sys.executable); print(sysconfig.get_config_var('Py_ENABLE_SHARED'))"
+          python -c "import tkinter; print('tkinter', tkinter.TkVersion)" || echo "TKINTER MISSING"
+          python -m pytest --version && python -m ruff --version && python -m mypy --version
+
+      # Проверки идут отдельными вызовами: если что-то упадёт, последние строки
+      # вывода попадают в аннотацию, которую можно прочитать без авторизации
+      # (логи job в GitHub API требуют токен).
+      - name: Tests, lint, types
+        shell: bash
+        run: |
+          fail=0
+          run_check() {
+            name="$1"; shift
+            echo "::group::$name"
+            out=$("$@" 2>&1); rc=$?
+            printf '%s\n' "$out"
+            echo "::endgroup::"
+            if [ "$rc" -ne 0 ]; then
+              msg=$(printf '%s\n' "$out" | tail -n 30 | tr '\n' '|' | cut -c1-900)
+              echo "::error title=$name failed (exit $rc)::$msg"
+              fail=1
+            fi
+          }
+          run_check pytest python -m pytest -o addopts="" -q
+          run_check ruff python -m ruff check .
+          run_check mypy python -m mypy src
+          exit $fail
 
       - name: Build .app
         env:
