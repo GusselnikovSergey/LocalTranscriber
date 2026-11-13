@@ -131,6 +131,17 @@ python -m venv .venv
 .\.venv\Scripts\python.exe scripts\make_testdata.py --out testdata\generated
 ```
 
+### Сборка приложения без Python
+
+```powershell
+.\scripts\build_exe.ps1
+```
+
+Скрипт собирает `dist\LocalTranscriber\LocalTranscriber.exe` (папку можно переносить
+целиком) и сразу проверяет сборку: гоняет `--selftest` на тестовом изображении, PDF и
+записи речи. Модели в сборку не входят — они скачиваются при первом запуске.
+Размер папки ≈500 МБ (ONNX Runtime, CTranslate2, PyAV, PyMuPDF).
+
 Структура:
 
 ```text
@@ -154,5 +165,4 @@ src/localtranscriber/
 ## Ограничения
 
 - Нет диаризации (кто говорил) и потокового распознавания с микрофона.
-- Нет сборки `.exe` — приложение запускается из исходников (может быть отдельной задачей).
 - Только Windows и только русский/английский интерфейс.

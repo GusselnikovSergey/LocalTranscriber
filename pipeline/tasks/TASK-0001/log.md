@@ -31,3 +31,19 @@
   Проверки: pytest 94 passed / 1 skipped, ruff, mypy зелёные; `smoke_check` и `gui_smoke` PASS.
 - 2026-11-13T18:12:00+03:00 — задача переведена в `verification` (итерация 2 из 3),
   передана на проверку №3 (независимые tester и reviewer, новые сессии).
+- 2026-11-13T18:35:00+03:00 — запуск независимых субагентов не удался: `Free usage limit
+  reached` (лимит бесплатных моделей). По решению заказчика проверка продолжена силами
+  разработчика: результаты в `05-verification/self-check.md` (12/12 дополнительных
+  сценариев PASS, отмена 0,01–0,11 с, офлайн 0 сетевых попыток). Независимая проверка
+  остаётся открытым пунктом O-1 в `06-acceptance.md`.
+- 2026-11-13T18:40:00+03:00 — `06-acceptance.md` заполнен: Decision: pending (ожидает
+  ручного теста заказчика и проверки №3). `status.json`: stage `verification`,
+  iterations 2/3, verdict `pending`.
+- 2026-11-13T18:45:00+03:00 — начата сборка standalone-приложения (PyInstaller,
+  `scripts/launcher.py`, onedir). Артефакт для ручного теста: `dist\LocalTranscriber\`.
+- 2026-11-13T19:25:00+03:00 — сборка проверена и доведена до рабочего состояния:
+  в пакет не попадала VAD-модель `faster_whisper/assets/silero_vad_v6.onnx` — добавлен
+  `--collect-all faster_whisper`; `--clean` убран из `scripts/build_exe.ps1` (полная очистка
+  кэша на этой машине периодически обрывает анализ PyInstaller). Встроенная самопроверка
+  `LocalTranscriber.exe --selftest`: изображение, digital.pdf, scanned.pdf, речь — 4/4 PASS,
+  exit 0. Окно запускается, процесс отвечает, размер 516 МБ.

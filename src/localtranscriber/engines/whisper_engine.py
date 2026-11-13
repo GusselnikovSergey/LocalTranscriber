@@ -237,9 +237,7 @@ class WhisperEngine:
             token.raise_if_cancelled()
         token.raise_if_cancelled()
         if self._load_error is not None:
-            error = self._load_error
-            self._load_error = None
-            raise error
+            raise self._load_error
         return self._model
 
     def process(
