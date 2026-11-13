@@ -23,3 +23,13 @@
   (`pip install -e .`), поэтому pytest не находил `localtranscriber`. Исправлено:
   `pythonpath = ["src"]` в `[tool.pytest.ini_options]` (`pyproject.toml`). Проверено
   имитацией CI: скрыл `.pth` editable-установки — 106 passed. Тег `v0.1.2`.
+- 2026-11-13T21:05:00+03:00 — прогоны `v0.1.2`…`v0.1.5`: дважды job даже не получил
+  раннер («The job was not acquired by Runner of type hosted», дефицит macos-15 arm64),
+  дважды падал шаг проверок. Логи job в публичном API отдают 403, поэтому в workflow
+  добавлены диагностические аннотации: проверки запускаются по отдельности, `set +e`,
+  хвост вывода уходит в `::error title=…::`. Коммиты `89b898a`, `f8d0193`.
+- 2026-11-13T21:35:00+03:00 — по аннотации найдена настоящая причина: `mypy src` на macOS
+  падает на `ctypes.windll` в `app.py` (typeshed на POSIX не знает `windll`). pytest и ruff
+  при этом были зелёные. Исправлено: `_enable_dpi_awareness()` выходит сразу вне Windows,
+  `windll` берётся через `getattr(ctypes, "windll", None)`. Локально: 106 passed, ruff и
+  mypy чистые. Коммит `f32aab1`, тег `v0.1.7`.
