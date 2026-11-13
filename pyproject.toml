@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "localtranscriber"
+version = "0.1.0"
+description = "Локальная транскрибация: речь в текст и OCR изображений/PDF без интернета"
+requires-python = ">=3.12"
+dependencies = [
+    "faster-whisper==1.2.1",
+    "av==19.0.2",
+    "rapidocr==3.10.0",
+    "pymupdf==2.1",
+    "pillow==13.0.0",
+    "numpy==2.5.4",
+    "requests==2.34.2",
+    "truststore==0.10.5",
+]
+
+[project.optional-dependencies]
+gui = ["tkinterdnd2==0.7.0"]
+dev = ["pytest==9.2.0", "ruff==0.17.5", "mypy==2.4.1"]
+
+[project.scripts]
+localtranscriber = "localtranscriber.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: тесты с реальными моделями и файлами (запускаются вручную)",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+files = ["src"]

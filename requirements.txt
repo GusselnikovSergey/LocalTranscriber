@@ -1,0 +1,10 @@
+# Зафиксированные версии: проверены pytest/ruff/mypy и живыми прогонами (Windows, Python 3.14.9).
+faster-whisper==1.2.1
+av==19.0.2
+rapidocr==3.10.0
+pymupdf==2.1
+pillow==13.0.0
+numpy==2.5.4
+requests==2.34.2
+truststore==0.10.5
+tkinterdnd2==0.7.0

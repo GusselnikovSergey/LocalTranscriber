@@ -1,0 +1,20 @@
+{
+  "max_iterations": 3,
+  "branch_prefix": "pipeline/",
+  "build_command": "",
+  "lint_command": "",
+  "typecheck_command": "",
+  "test_command": "",
+  "required_checks": [
+    "build",
+    "lint",
+    "test"
+  ],
+  "security_required_for_risk": [
+    "high",
+    "security",
+    "data"
+  ],
+  "default_stack": "Python 3.14 + faster-whisper (CPU int8) + Tkinter + OCR (RapidOCR/Tesseract) + PyMuPDF",
+  "projects_dir": "projects"
+}

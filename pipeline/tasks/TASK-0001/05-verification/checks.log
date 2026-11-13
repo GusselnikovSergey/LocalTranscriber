@@ -1,0 +1,55 @@
+# Checks: TASK-0001
+
+Started: 2026-11-13T14:30:00+03:00
+Project root: C:\Users\Сергей\Documents\Проект по умолчанию\projects\LocalTranscriber
+Python: 3.14.9 (venv .venv)
+
+## build
+
+Command: .\.venv\Scripts\python.exe -m compileall -q src tests
+Exit code: 0
+Result: PASS
+
+## lint
+
+Command: .\.venv\Scripts\python.exe -m ruff check .
+Exit code: 0
+Result: PASS
+### stdout
+All checks passed!
+
+## typecheck
+
+Command: .\.venv\Scripts\python.exe -m mypy src
+Exit code: 0
+Result: PASS
+### stdout
+Success: no issues found in 21 source files
+
+## test
+
+Command: .\.venv\Scripts\python.exe -m pytest
+Exit code: 0
+Result: PASS
+### stdout
+72 passed, 1 skipped in 5.54s
+(пропущен тест с реальной моделью: помечен `slow`, требует RUN_SLOW=1)
+
+## functional smoke (вне набора pytest)
+
+Command: .\.venv\Scripts\python.exe scripts\smoke_check.py --data testdata\generated --model small --language en
+Result: PASS (OCR 3.1 с / повторно 0.65 с; цифровой PDF 0.1 с; скан-PDF 2.4 с; речь 3.9 с, RTF 0.41, текст совпал)
+
+Command: .\.venv\Scripts\python.exe scripts\gui_smoke.py --data testdata\generated --out testdata\output --audio testdata\generated\speech_en_long.wav --language en --model small
+Result: PASS (4 файла в очереди, все «Готово», автосохранение 4 .txt, речь 1041 символ)
+
+Command: офлайн-проверка с запретом socket.connect (OCR + скан-PDF + речь)
+Result: PASS (попыток сетевых подключений: 0)
+
+## cancel latency (FR-05)
+
+Command: замер отмены через 0,05/0,1/0,2/0,3/0,5/1/2/3 с на speech_en_long.wav (small, 16 потоков)
+Result: PASS (движок: медиана 0.11 с, максимум 0.35 с; JobQueue после загрузки модели: 0.02–0.09 с; больше 3 с — 0 из 13)
+
+Finished: 2026-11-13T15:25:00+03:00
+Summary: PASS
