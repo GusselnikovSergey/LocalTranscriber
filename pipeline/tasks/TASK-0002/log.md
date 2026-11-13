@@ -33,3 +33,9 @@
   при этом были зелёные. Исправлено: `_enable_dpi_awareness()` выходит сразу вне Windows,
   `windll` берётся через `getattr(ctypes, "windll", None)`. Локально: 106 passed, ruff и
   mypy чистые. Коммит `f32aab1`, тег `v0.1.7`.
+- 2026-11-13T21:45:00+03:00 — **прогон `v0.1.7` зелёный**: сборка `.app`, ad-hoc подпись,
+  `--diagnose` и артефакт прошли. Артефакт `LocalTranscriber-macos-arm64` — 224 МБ
+  (zip с `LocalTranscriber.app`), digest `sha256:7cee0af9…`, хранится до 2027-02-11.
+  Прогон: https://github.com/GusselnikovSergey/LocalTranscriber/actions/runs/43483275683
+  Написана самопроверка `05-verification/self-check.md`; задача переведена в `acceptance`,
+  вердикт `pending` — до ручного запуска `.app` на Mac.

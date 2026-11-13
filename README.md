@@ -152,8 +152,17 @@ PyInstaller не умеет кросс-компиляцию, поэтому `.ap
 
 **1. GitHub Actions (Mac не нужен).** Вкладка **Actions** → **macOS build** →
 **Run workflow**. Через ~20 минут в артефактах появится
-`LocalTranscriber-macos-arm64` (zip с `LocalTranscriber.app`). Сборка идёт на `macos-15`
-(Apple Silicon); workflow также прогоняет тесты, `ruff` и `mypy`.
+`LocalTranscriber-macos-arm64` (zip ≈224 МБ с `LocalTranscriber.app`). Сборка идёт на
+`macos-15` (Apple Silicon); workflow также прогоняет тесты, `ruff` и `mypy`.
+Артефакты GitHub хранит 90 дней и скачивает только после входа в GitHub.
+
+Как забрать готовую сборку:
+
+1. Открыть <https://github.com/GusselnikovSergey/LocalTranscriber/actions>, выбрать зелёный
+   прогон **macOS build** (последний — `v0.1.7`).
+2. Внизу страницы прогона — блок **Artifacts** → **LocalTranscriber-macos-arm64**.
+3. Распаковать zip (двойной клик) → внутри `LocalTranscriber.app`.
+4. Перетащить `LocalTranscriber.app` в «Программы» и запустить правым кликом → **Открыть**.
 
 **2. На своём Mac** (нужен Xcode Command Line Tools: `xcode-select --install`):
 
