@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import tkinter as tk
 
 from . import __version__
@@ -16,11 +17,17 @@ _log = logging.getLogger(__name__)
 
 def _enable_dpi_awareness() -> None:
     """Чёткий текст на экранах с масштабированием Windows."""
+    if sys.platform != "win32":
+        return
     try:
         import ctypes
 
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:  # noqa: BLE001 - не критично и не существует вне Windows
+        # windll существует только на Windows, mypy о нём не знает.
+        windll = getattr(ctypes, "windll", None)
+        if windll is None:
+            return
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:  # noqa: BLE001 - не критично и может отсутствовать в старых Windows
         pass
 
 

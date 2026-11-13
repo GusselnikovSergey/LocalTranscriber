@@ -42,7 +42,7 @@ jobs:
 
       # Проверки идут отдельными вызовами с `set +e` (иначе `bash -e` обрывает
       # скрипт на первой ошибке и аннотация не печатается). Хвост вывода уходит
-      # в аннотацию и на paste.rs: логи job в GitHub API требуют токен.
+      # в аннотацию: логи job в GitHub API требуют токен, аннотации — нет.
       - name: Tests, lint, types
         shell: bash
         run: |
@@ -65,10 +65,6 @@ jobs:
           run_check ruff python -m ruff check .
           run_check mypy python -m mypy src
           tail -n 80 "$log"
-          if [ "$fail" -ne 0 ]; then
-            url=$(curl -sS --data-binary @"$log" https://paste.rs 2>/dev/null)
-            echo "::error::Full CI log: $url"
-          fi
           exit $fail
 
       - name: Build .app
