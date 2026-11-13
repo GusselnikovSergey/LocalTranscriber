@@ -40,14 +40,19 @@ def run_diagnose(out: Path) -> int:
     )
     items: list[dict[str, object]] = []
     ok = True
+    # tkinterdnd2 — опционально: без него приложение работает без drag&drop.
+    optional = {"tkinterdnd2"}
     for name in modules:
         item: dict[str, object] = {"module": name}
         try:
             module = importlib.import_module(name)
             item["version"] = str(getattr(module, "__version__", "") or "")
         except Exception as exc:  # noqa: BLE001 - отчёт должен собраться полностью
-            ok = False
             item["error"] = f"{type(exc).__name__}: {exc}"
+            if name in optional:
+                item["optional"] = True
+            else:
+                ok = False
         items.append(item)
     payload: dict[str, object] = {
         "frozen": bool(getattr(sys, "frozen", False)),
