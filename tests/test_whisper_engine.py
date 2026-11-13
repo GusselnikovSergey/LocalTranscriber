@@ -13,6 +13,7 @@ from localtranscriber.cancellation import CancelToken
 from localtranscriber.engines.base import Result
 from localtranscriber.engines.whisper_engine import (
     WhisperEngine,
+    call_with_cancel,
     collect_segments,
     iter_with_cancel,
     model_directory,
@@ -88,6 +89,32 @@ def test_iter_with_cancel_propagates_engine_error() -> None:
         list(iter_with_cancel(broken(), CancelToken()))
 
 
+def test_call_with_cancel_returns_value() -> None:
+    assert call_with_cancel(lambda: 42, CancelToken()) == 42
+
+
+def test_call_with_cancel_propagates_error() -> None:
+    def boom() -> None:
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        call_with_cancel(boom, CancelToken())
+
+
+def test_call_with_cancel_stops_waiting_for_slow_call() -> None:
+    """Отмена не должна ждать, пока подготовка распознавания закончится (D-03)."""
+    cancel = CancelToken()
+    timer = threading.Timer(0.1, cancel.cancel)
+    started = time.perf_counter()
+    timer.start()
+    try:
+        with pytest.raises(CancelledError):
+            call_with_cancel(lambda: time.sleep(3.0), cancel)
+    finally:
+        timer.cancel()
+    assert time.perf_counter() - started < 1.0
+
+
 class FakeModel:
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -133,6 +160,75 @@ def test_process_auto_language(monkeypatch, tmp_path) -> None:
     engine = WhisperEngine("small", language="auto", model_factory=lambda: model)
     engine.process(audio_path, cancel=CancelToken(), progress=lambda *_: None)
     assert model.calls[0]["language"] is None
+
+
+def test_process_cancel_while_transcribe_call_is_slow(monkeypatch, tmp_path) -> None:
+    """Отмена при подготовке распознавания укладывается в FR-05 (D-03).
+
+    ``WhisperModel.transcribe()`` до возврата генератора выполняет VAD и подготовку
+    признаков; при отмене в этот момент движок не должен ждать её окончания.
+    """
+    audio_path = tmp_path / "voice.mp3"
+    audio_path.write_bytes(b"")
+    fake_audio = DecodedAudio(samples=np.zeros(16000, dtype=np.float32), duration=3.0)
+    monkeypatch.setattr(
+        "localtranscriber.engines.whisper_engine.decode_audio",
+        lambda path, cancel=None, progress=None: fake_audio,
+    )
+
+    class SlowCallModel:
+        def transcribe(self, audio, **kwargs):
+            time.sleep(2.0)
+            return iter([raw(0, 1, "поздно")]), SimpleNamespace(language="ru")
+
+    cancel = CancelToken()
+    timer = threading.Timer(0.1, cancel.cancel)
+    started = time.perf_counter()
+    timer.start()
+    try:
+        with pytest.raises(CancelledError):
+            WhisperEngine("small", model_factory=SlowCallModel).process(
+                audio_path, cancel=cancel, progress=lambda *_: None
+            )
+    finally:
+        timer.cancel()
+    assert time.perf_counter() - started < 1.0
+
+
+def test_process_cancel_during_model_load(monkeypatch, tmp_path) -> None:
+    """Загрузка модели не блокирует отмену: она идёт в фоне и переиспользуется."""
+    audio_path = tmp_path / "voice.mp3"
+    audio_path.write_bytes(b"")
+    fake_audio = DecodedAudio(samples=np.zeros(16000, dtype=np.float32), duration=2.0)
+    monkeypatch.setattr(
+        "localtranscriber.engines.whisper_engine.decode_audio",
+        lambda path, cancel=None, progress=None: fake_audio,
+    )
+    calls = {"count": 0}
+
+    def slow_factory() -> FakeModel:
+        calls["count"] += 1
+        time.sleep(1.5)
+        return FakeModel()
+
+    engine = WhisperEngine("small", model_factory=slow_factory)
+    cancel = CancelToken()
+    timer = threading.Timer(0.1, cancel.cancel)
+    started = time.perf_counter()
+    timer.start()
+    try:
+        with pytest.raises(CancelledError):
+            engine.process(audio_path, cancel=cancel, progress=lambda *_: None)
+    finally:
+        timer.cancel()
+    assert time.perf_counter() - started < 1.0
+
+    # Брошенная загрузка доводится до конца, повторная не запускается.
+    assert engine._load_event.wait(5.0)
+    assert calls["count"] == 1
+    result = engine.process(audio_path, cancel=CancelToken(), progress=lambda *_: None)
+    assert result.text
+    assert calls["count"] == 1
 
 
 def test_model_directory_layout(tmp_path) -> None:

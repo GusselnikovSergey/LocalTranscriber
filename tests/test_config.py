@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 from localtranscriber.config import (
     DEFAULT_MODEL,
     MODEL_SIZES,
@@ -76,3 +78,32 @@ def test_threads_are_clamped(tmp_path) -> None:
 def test_missing_file_returns_defaults(tmp_path) -> None:
     loaded = load_settings(tmp_path / "nope.json")
     assert loaded.model_size == DEFAULT_MODEL
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("false", False),
+        ("False", False),
+        ("0", False),
+        ("нет", False),
+        ("no", False),
+        ("off", False),
+        ("", False),
+        ("true", True),
+        ("1", True),
+        ("да", True),
+        (0, False),
+        (1, True),
+    ],
+)
+def test_show_timestamps_normalized(tmp_path, raw, expected) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"show_timestamps": raw}), encoding="utf-8")
+    assert load_settings(path).show_timestamps is expected
+
+
+def test_relative_output_dir_resolved_under_documents(tmp_path) -> None:
+    settings = Settings(output_dir="мои-результаты")
+    assert settings.resolved_output_dir().is_absolute()
+    assert settings.resolved_output_dir().name == "мои-результаты"

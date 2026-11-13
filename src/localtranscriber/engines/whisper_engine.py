@@ -74,6 +74,41 @@ def iter_with_cancel(
         stop.set()
 
 
+def call_with_cancel(
+    func: Callable[[], Any],
+    cancel: CancelToken,
+    *,
+    poll: float = CANCEL_POLL,
+) -> Any:
+    """Выполняет блокирующий вызов модели, не задерживая отмену.
+
+    ``WhisperModel.transcribe()`` до возврата генератора успевает выполнить VAD и
+    подготовку признаков: на длинной записи под нагрузкой это занимает секунды,
+    и проверка токена между сегментами не успевает сработать (FR-05 требует ≤3 с).
+    Поэтому сам вызов идёт в отдельном потоке, а основной поток опрашивает токен
+    с шагом ``poll``. Брошенный вызов досчитывается в фоне и выбрасывается.
+    """
+    box: dict[str, Any] = {}
+    finished = threading.Event()
+
+    def runner() -> None:
+        try:
+            box["value"] = func()
+        except BaseException as exc:  # noqa: BLE001 - пробрасываем в основной поток
+            box["error"] = exc
+        finally:
+            finished.set()
+
+    thread = threading.Thread(target=runner, name="whisper-call", daemon=True)
+    thread.start()
+    while not finished.wait(poll):
+        cancel.raise_if_cancelled()
+    cancel.raise_if_cancelled()
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
+
+
 def model_directory(size: str, root: Path | None = None) -> Path:
     """Каталог локальной копии модели (наш формат хранения)."""
     base = root or models_dir()
@@ -132,17 +167,18 @@ class WhisperEngine:
         self.compute_type = compute_type
         self._model: Any | None = None
         self._model_factory = model_factory
+        self._load_lock = threading.Lock()
+        self._load_event = threading.Event()
+        self._loading = False
+        self._load_error: BaseException | None = None
 
     @property
     def display_name(self) -> str:
         return f"Whisper {self.model_size}"
 
-    def _load_model(self) -> Any:
-        if self._model is not None:
-            return self._model
+    def _build_model(self) -> Any:
         if self._model_factory is not None:
-            self._model = self._model_factory()
-            return self._model
+            return self._model_factory()
 
         from faster_whisper import WhisperModel
 
@@ -163,8 +199,48 @@ class WhisperEngine:
             time.perf_counter() - started,
             self.cpu_threads,
         )
-        self._model = model
         return model
+
+    def _start_loading(self) -> None:
+        self._load_event.clear()
+        self._load_error = None
+        self._loading = True
+
+        def worker() -> None:
+            try:
+                model = self._build_model()
+                self._model = model
+            except BaseException as exc:  # noqa: BLE001 - отдадим в основной поток
+                self._load_error = exc
+            finally:
+                self._loading = False
+                self._load_event.set()
+
+        threading.Thread(target=worker, name="whisper-load", daemon=True).start()
+
+    def _load_model(self, cancel: CancelToken | None = None) -> Any:
+        """Возвращает модель, загружая её в фоне.
+
+        Загрузка ``WhisperModel`` занимает секунды и не умеет прерываться, поэтому
+        идёт в отдельном потоке: отмена срабатывает сразу (FR-05), а начатая
+        загрузка доводится до конца и переиспользуется следующим заданием.
+        """
+        if self._model is not None:
+            return self._model
+        with self._load_lock:
+            if self._model is not None:
+                return self._model
+            if not self._loading:
+                self._start_loading()
+        token = cancel or CancelToken()
+        while not self._load_event.wait(CANCEL_POLL):
+            token.raise_if_cancelled()
+        token.raise_if_cancelled()
+        if self._load_error is not None:
+            error = self._load_error
+            self._load_error = None
+            raise error
+        return self._model
 
     def process(
         self, path: Path, *, cancel: CancelToken, progress: ProgressCallback
@@ -175,20 +251,23 @@ class WhisperEngine:
             )
         )
         progress(DECODE_SHARE, "Подготовка модели")
-        model = self._load_model()
+        model = self._load_model(cancel)
         cancel.raise_if_cancelled()
         progress(DECODE_SHARE, "Распознавание речи")
 
         language = None if self.language in ("", "auto") else self.language
         started = time.perf_counter()
-        raw_segments, info = model.transcribe(
-            decoded.samples,
-            language=language,
-            beam_size=1,
-            vad_filter=True,
-            vad_parameters={"min_silence_duration_ms": 500, "speech_pad_ms": 200},
-            condition_on_previous_text=False,
-            word_timestamps=False,
+        raw_segments, info = call_with_cancel(
+            lambda: model.transcribe(
+                decoded.samples,
+                language=language,
+                beam_size=1,
+                vad_filter=True,
+                vad_parameters={"min_silence_duration_ms": 500, "speech_pad_ms": 200},
+                condition_on_previous_text=False,
+                word_timestamps=False,
+            ),
+            cancel,
         )
         segments = collect_segments(
             iter_with_cancel(raw_segments, cancel),

@@ -119,6 +119,10 @@ class Settings:
 
     def resolved_output_dir(self) -> Path:
         path = Path(os.path.expandvars(os.path.expanduser(self.output_dir)))
+        if not path.is_absolute():
+            # Относительный путь из испорченного settings.json не должен уводить
+            # результаты в текущий каталог процесса (R-17).
+            path = default_output_dir() / path
         return path
 
 

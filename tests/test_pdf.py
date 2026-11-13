@@ -46,6 +46,11 @@ def test_page_has_text_threshold() -> None:
     assert page_has_text("Достаточно длинный текст страницы " * 2) is True
     assert page_has_text("коротко") is False
     assert page_has_text("   ") is False
+    # Граница порога: 9 символов — ещё не текстовый слой, 10 — уже он (N-05).
+    assert page_has_text("девятьсим") is False
+    assert page_has_text("десятьсимв") is True
+    # Водяной знак/колонтитул короче порога не должен отменять OCR страницы-скана.
+    assert page_has_text("Черновик", min_chars=10) is False
 
 
 def test_pages_to_text_import() -> None:

@@ -1,10 +1,10 @@
 {
   "id": "TASK-0001",
   "title": "Локальная транскрибация: аудио/видео в текст и OCR картинок/PDF",
-  "stage": "development_done",
+  "stage": "verification",
   "created": "2026-11-13T11:50:38+03:00",
-  "updated": "2026-11-13T13:16:00+03:00",
-  "iterations": 0,
+  "updated": "2026-11-13T18:12:00+03:00",
+  "iterations": 2,
   "max_iterations": 3,
   "priority": "high",
   "type": "feature",

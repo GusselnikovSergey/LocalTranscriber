@@ -161,3 +161,55 @@ def test_queue_is_thread_safe_for_wait(tmp_path: Path) -> None:
     thread.join(5)
     assert not thread.is_alive()
     assert jobs.jobs[0].status == STATUS_DONE
+
+
+class HeartbeatProcessor:
+    """Сообщает прогресс один раз и «замирает» — как долгая страница OCR."""
+
+    name = "heartbeat"
+
+    def __init__(self, *, report: bool = True, pause: float = 1.2) -> None:
+        self.report = report
+        self.pause = pause
+
+    def process(
+        self, path: Path, *, cancel: CancelToken, progress: ProgressCallback
+    ) -> Result:
+        if self.report:
+            progress(0.3, "долгий шаг")
+        time.sleep(self.pause)
+        return Result(kind="text", text="готово")
+
+
+def test_heartbeat_repeats_last_progress(tmp_path: Path) -> None:
+    events: queue.Queue = queue.Queue()
+    jobs = JobQueue(lambda kind: HeartbeatProcessor(), events)
+    jobs.extend(make_files(tmp_path, 1))
+    jobs.start()
+    jobs.wait(10)
+    progress_events = [event for event in drain(events) if event[0] == "progress"]
+    assert len(progress_events) >= 2
+    assert {event[2] for event in progress_events} == {0.3}
+
+
+def test_heartbeat_silent_before_first_progress(tmp_path: Path) -> None:
+    """Пульс не должен выдавать «Обработка… 0 %» раньше реального прогресса (N-01)."""
+    events: queue.Queue = queue.Queue()
+    jobs = JobQueue(lambda kind: HeartbeatProcessor(report=False), events)
+    jobs.extend(make_files(tmp_path, 1))
+    jobs.start()
+    jobs.wait(10)
+    assert [event for event in drain(events) if event[0] == "progress"] == []
+
+
+def test_no_progress_after_job_done(tmp_path: Path) -> None:
+    """Пульс останавливается до событий завершения, чтобы не перебить финальный статус (N-02)."""
+    events: queue.Queue = queue.Queue()
+    jobs = JobQueue(lambda kind: HeartbeatProcessor(pause=1.0), events)
+    jobs.extend(make_files(tmp_path, 1))
+    jobs.start()
+    jobs.wait(10)
+    names = [event[0] for event in drain(events)]
+    assert names[-1] == "queue_done"
+    done_at = names.index("job_done")
+    assert "progress" not in names[done_at:]

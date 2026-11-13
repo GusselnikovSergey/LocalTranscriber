@@ -53,3 +53,22 @@ Result: PASS (движок: медиана 0.11 с, максимум 0.35 с; Jo
 
 Finished: 2026-11-13T15:25:00+03:00
 Summary: PASS
+
+## Повторный прогон после доработки №2 (DEV-06)
+
+Started: 2026-11-13T18:05:00+03:00
+
+| Шаг | Команда | Результат |
+|---|---|---|
+| build | `.\.venv\Scripts\python.exe -m compileall -q src tests` | PASS (0) |
+| lint | `.\.venv\Scripts\python.exe -m ruff check .` | PASS — `All checks passed!` |
+| typecheck | `.\.venv\Scripts\python.exe -m mypy src` | PASS — `Success: no issues found in 21 source files` |
+| test | `.\.venv\Scripts\python.exe -m pytest -o addopts="" -q` | PASS — `94 passed, 1 skipped in 10.26s` |
+| smoke | `scripts\smoke_check.py --data testdata\generated --model small --language en` | PASS — OCR 2,7 с / 0,70 с; digital.pdf 0,1 с (OCR-страниц 0); scanned.pdf 2,3 с (OCR-страниц 1); речь 3,8 с, RTF 0,41 |
+| gui smoke | `scripts\gui_smoke.py … --audio speech_en_long.wav` | PASS — 4 файла «Готово», автосохранение, речь 1041 символ |
+| cancel (FR-05) | `%TEMP%\opencode\lt-diag\probe_queue.py` — JobQueue, отмена через 0,05…1,0 с | PASS — 0,01–0,11 с, все задания `cancelled` |
+| cancel (FR-05) | `%TEMP%\opencode\lt-diag\probe_cold3.py` — отмена во время первой загрузки модели | PASS — 0,11 с, фоновая загрузка переиспользована |
+
+Finished: 2026-11-13T18:12:00+03:00
+Summary: PASS (готово к проверке №3)
+

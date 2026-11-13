@@ -69,6 +69,10 @@ def repo_files(repo: str) -> list[ModelFile]:
             raise ModelUnavailableError(f"{message} Подробности: {exc}") from exc
     finally:
         response.close()
+    if not isinstance(payload, dict):
+        raise ModelUnavailableError(
+            f"{message} Сервер вернул неожиданный ответ вместо списка файлов."
+        )
     siblings = payload.get("siblings") or []
     files: list[ModelFile] = []
     for item in siblings:

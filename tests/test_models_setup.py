@@ -124,7 +124,11 @@ def test_download_discards_corrupted_file(monkeypatch, tmp_path: Path) -> None:
     target = tmp_path / "model.bin"
     install(
         monkeypatch,
-        [FakeResponse(200, [b"broken"]), FakeResponse(200, [b"broken"])],
+        [
+            FakeResponse(200, [b"broken"]),
+            FakeResponse(200, [b"broken"]),
+            FakeResponse(200, [b"broken"]),
+        ],
     )
 
     with pytest.raises(ModelUnavailableError):
@@ -157,6 +161,17 @@ def test_repo_files_wraps_network_error(monkeypatch) -> None:
     monkeypatch.setattr(models_setup, "http_get", boom)
 
     with pytest.raises(ModelUnavailableError, match="интернет"):
+        models_setup.repo_files("Systran/faster-whisper-small")
+
+
+def test_repo_files_rejects_unexpected_payload(monkeypatch) -> None:
+    class ListResponse(FakeResponse):
+        def json(self):
+            return ["не тот ответ"]
+
+    install(monkeypatch, [ListResponse(200, [])])
+
+    with pytest.raises(ModelUnavailableError, match="неожиданный ответ"):
         models_setup.repo_files("Systran/faster-whisper-small")
 
 

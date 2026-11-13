@@ -35,6 +35,11 @@ from .widgets import SettingsDialog, TextPanel
 
 _log = logging.getLogger(__name__)
 
+PLACEHOLDER_SPEECH = "— Речь не обнаружена —"
+PLACEHOLDER_TEXT = "— Текст не найден —"
+PLACEHOLDERS = frozenset({PLACEHOLDER_SPEECH, PLACEHOLDER_TEXT})
+
+
 STATUS_LABELS: dict[str, str] = {
     STATUS_QUEUED: "В очереди",
     STATUS_RUNNING: "Обработка…",
@@ -328,12 +333,18 @@ class MainWindow:
         os.startfile(str(directory))
 
     def _copy(self) -> None:
-        text = self.editor.get_text()
-        if not text.strip():
+        text = self._content_text()
+        if not text:
+            self._set_status("Нет текста для копирования")
             return
         self.root.clipboard_clear()
         self.root.clipboard_append(text)
         self._set_status("Результат скопирован в буфер обмена")
+
+    def _content_text(self) -> str:
+        """Текст редактора без служебной заглушки «— Текст не найден —»."""
+        text = self.editor.get_text().strip()
+        return "" if text in PLACEHOLDERS else text
 
     def _save_as(self) -> None:
         job = self._current_job()
@@ -343,7 +354,7 @@ class MainWindow:
                 parent=self.root,
             )
             return
-        if not job.result.text.strip():
+        if not self._content_text():
             messagebox.showinfo(
                 "Нет текста",
                 "В этом файле не найден текст — сохранять нечего. "
@@ -384,7 +395,7 @@ class MainWindow:
             fmt = "txt"
         content = export_text(
             fmt,
-            self.editor.get_text() or job.result.text,
+            self._content_text() or job.result.text,
             segments=job.result.segments,
             meta=job.result.meta,
         )
@@ -512,8 +523,8 @@ class MainWindow:
             return job.message if job.status == STATUS_ERROR else ""
         if not result.text.strip():
             if job.kind is JobKind.SPEECH:
-                return "— Речь не обнаружена —"
-            return "— Текст не найден —"
+                return PLACEHOLDER_SPEECH
+            return PLACEHOLDER_TEXT
         if self.settings.show_timestamps and result.segments:
             return segments_to_cues(result.segments, with_timestamps=True)
         return result.text

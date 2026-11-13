@@ -122,26 +122,34 @@ class JobQueue:
             self._emit("job_status", index, job.status, job.message)
             last: dict[str, float | str] = {"fraction": 0.0, "message": "Обработка…"}
             stop_heartbeat = threading.Event()
+            seen_progress = threading.Event()
 
             def report_progress(
                 fraction: float,
                 message: str,
                 _index: int = index,
                 _last: dict[str, float | str] = last,
+                _seen: threading.Event = seen_progress,
             ) -> None:
                 clamped = max(0.0, min(float(fraction), 1.0))
                 _last["fraction"] = clamped
                 _last["message"] = message
+                _seen.set()
                 self._progress(_index, clamped, message)
 
             def heartbeat(
                 _index: int = index,
                 _last: dict[str, float | str] = last,
                 _stop: threading.Event = stop_heartbeat,
+                _seen: threading.Event = seen_progress,
             ) -> None:
                 # Долгие шаги (декодирование, страница OCR) не дают событий:
                 # повторяем последний прогресс, чтобы интерфейс не «замирал».
+                # Пока задание не сообщило ни одного прогресса, повторять нечего —
+                # иначе заглушка «Обработка… 0 %» перебивает прогресс скачивания модели.
                 while not _stop.wait(0.4):
+                    if not _seen.is_set():
+                        continue
                     self._progress(
                         _index, float(_last["fraction"]), str(_last["message"])
                     )
@@ -175,6 +183,9 @@ class JobQueue:
                 continue
             finally:
                 stop_heartbeat.set()
+                # Дожидаемся пульса, чтобы устаревшее событие progress не попало
+                # в очередь после job_done и не перебило финальный статус.
+                pulse.join(0.5)
 
             job.result = result
             job.status = STATUS_DONE
