@@ -46,7 +46,15 @@ workflow закреплён на `macos-15` (macOS 14 в Actions снят с п�
 - `tests/test_platform_paths.py` — каталоги macOS, сохранение Windows-переменных
   `%APPDATA%`/`%LOCALAPPDATA%`, игнорирование Windows-переменных на macOS.
 
-## 4. Ограничения
+## 4. CI: что пришлось поправить в процессе
+
+| Прогон | Тег | Итог | Причина / исправление |
+|---|---|---|---|
+| №1 | `v0.1.0` | cancelled за 4 с | «The configuration 'macos-14-arm64-us-default' is not supported» — macOS 14 снят с поддержки в Actions 02.11.2026 → `runs-on: macos-15` |
+| №2 | `v0.1.1` | failure на «Tests, lint, types» (exit 2) | pytest не находил пакет: workflow ставит `requirements.txt`, но не `pip install -e .` → `pythonpath = ["src"]` в `[tool.pytest.ini_options]` |
+| №3 | `v0.1.2` | см. п.5 | — |
+
+## 5. Ограничения
 
 - Сборка подписана ad-hoc: первый запуск — правый клик → «Открыть» (или
   `xattr -dr com.apple.quarantine`). Developer ID/нотаризация не делались (нет

@@ -18,3 +18,8 @@
 - 2026-11-13T20:37:00+03:00 — первый прогон отменён GitHub: «The configuration
   'macos-14-arm64-us-default' is not supported» (macOS 14 в Actions снят с поддержки
   02.11.2026). `runs-on` изменён на `macos-15` (arm64 GA), тег `v0.1.1` — повторный запуск.
+- 2026-11-13T20:50:00+03:00 — прогон №2 (`v0.1.1`) упал на шаге «Tests, lint, types»
+  (exit 2). Причина: в workflow ставится `requirements.txt`, но не сам пакет
+  (`pip install -e .`), поэтому pytest не находил `localtranscriber`. Исправлено:
+  `pythonpath = ["src"]` в `[tool.pytest.ini_options]` (`pyproject.toml`). Проверено
+  имитацией CI: скрыл `.pth` editable-установки — 106 passed. Тег `v0.1.2`.
