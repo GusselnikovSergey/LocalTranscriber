@@ -12,6 +12,9 @@
   `macosx_14_0_arm64` / cp313 (включая `av==19.0.2`; при теге `macosx_11_0` pip даёт
   ложный минус). Windows-регрессия: `build_exe.ps1` + `--selftest` — OK,
   `gui_smoke.py` — OK, `--diagnose` внутри exe — OK.
-- 2026-11-13T20:30:00+03:00 — ожидание: репозиторий GitHub и разрешение на push
-  (у заказчика нет `gh` и настроенного remote). После пуша — прогон workflow,
-  скачивание артефакта, запуск `.app` на Mac.
+- 2026-11-13T20:30:00+03:00 — ожидание: репозиторий GitHub и разрешение на push.
+  Получена ссылка https://github.com/GusselnikovSergey/LocalTranscriber — ветка `main` и
+  тег `v0.1.0` запушены, workflow запустился.
+- 2026-11-13T20:37:00+03:00 — первый прогон отменён GitHub: «The configuration
+  'macos-14-arm64-us-default' is not supported» (macOS 14 в Actions снят с поддержки
+  02.11.2026). `runs-on` изменён на `macos-15` (arm64 GA), тег `v0.1.1` — повторный запуск.

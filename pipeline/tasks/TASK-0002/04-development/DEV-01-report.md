@@ -13,7 +13,7 @@
 | FR-03 | `modifier_label()` (`Cmd`/`Ctrl`) в меню; `shortcut_bindings()` добавляет `<Command-o>`/`<Command-s>` на macOS, `<Control-…>` остаётся |
 | FR-04 | `scripts/run.sh` — запуск из исходников (venv, зависимости, `PYTHONPATH=src`) |
 | FR-05 | `scripts/build_mac.sh` — PyInstaller `.app`, ad-hoc `codesign`, диагностика, zip |
-| FR-06 | `.github/workflows/build-macos.yml` — `macos-14`, Python 3.13, тесты/ruff/mypy, сборка, артефакт |
+| FR-06 | `.github/workflows/build-macos.yml` — `macos-15`, Python 3.13, тесты/ruff/mypy, сборка, артефакт |
 | FR-07 | поведение Windows не менялось; регрессия зелёная |
 
 Дополнительно: в `scripts/launcher.py` добавлен режим `--diagnose отчёт.json` —
@@ -37,7 +37,7 @@
 
 Важно: `pip download --platform macosx_11_0_arm64` даёт ложный минус на `av==19.0.2`
 (колёса PyAV собраны под macOS 14), при `macosx_14_0_arm64` всё скачивается. Поэтому
-workflow закреплён на `macos-14`.
+workflow закреплён на `macos-15` (macOS 14 в Actions снят с поддержки 02.11.2026).
 
 ## 3. Новые тесты
 

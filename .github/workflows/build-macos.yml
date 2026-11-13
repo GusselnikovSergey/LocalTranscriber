@@ -15,7 +15,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    # macOS 14 в GitHub Actions снят с поддержки 02.11.2026; macos-15 — arm64 GA.
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
