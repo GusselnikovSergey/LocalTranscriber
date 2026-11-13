@@ -58,13 +58,19 @@ R-06 (`probe_duration` в главном потоке), R-09 (оценка вр�
 - `probe_duration` при добавлении файлов работает в главном потоке (для локальных файлов — мс).
 - Кэш движков и `self.settings` читаются из worker-потока без блокировки (под GIL безопасно,
   но модель может подмениться посреди очереди).
+- Сборка macOS подписана ad-hoc (без Apple Developer ID): первый запуск — правый клик →
+  «Открыть». Собирается под Apple Silicon; Intel-Mac/universal2 — вне scope.
 
 ## 5. Сборка и ручной тест
 
 ```powershell
-.\scripts\build_exe.ps1        # dist\LocalTranscriber\LocalTranscriber.exe + самопроверка
+.\scripts\build_exe.ps1        # Windows: dist\LocalTranscriber\LocalTranscriber.exe + самопроверка
 .\run.ps1                      # запуск из исходников
 ```
+
+macOS: `.app` собирается только на macOS — либо GitHub Actions (`.github/workflows/build-macos.yml`,
+вкладка Actions → macOS build → Run workflow), либо `bash scripts/build_mac.sh` на Mac.
+Подробности — в README, раздел «macOS».
 
 Сборка проверена 2026-11-13: окно запускается, `--selftest` на изображении, текстовом и
 сканированном PDF и на записи речи — 4/4 PASS, размер папки 516 МБ. Модели в сборку не
@@ -75,9 +81,10 @@ R-06 (`probe_duration` в главном потоке), R-09 (оценка вр�
 Чек-лист ручного теста — `MANUAL-TEST.md` (сценарии и ожидаемое поведение).
 Диагностика сборки: `LocalTranscriber.exe --selftest отчёт.json файл1 файл2 …`.
 
-## 6. Правила работы в этом репозитории
+## 5. Правила работы в этом репозитории
 
-- Ветка `main`; задача ведётся в `pipeline/TASK-0001`. Пуш и деплой не выполняются.
+- Ветка `main`; задачи ведутся в `pipeline/TASK-0001` (приложение) и `pipeline/TASK-0002`
+  (порт на macOS). Пуш и деплой не выполняются без явного разрешения заказчика.
 - Перед коммитом: `pytest -q`, `ruff check .`, `mypy src` — все зелёные.
 - Каждое изменение фиксируется в `pipeline/tasks/TASK-0001/log.md` (дата, что сделано,
   что проверено, каким способом).

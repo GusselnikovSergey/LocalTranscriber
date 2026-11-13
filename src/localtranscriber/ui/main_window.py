@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import os
 import queue
 import tkinter as tk
 from pathlib import Path
@@ -29,6 +28,7 @@ from ..jobs import (
 )
 from ..models_setup import ensure_whisper_model, whisper_model_path
 from ..pdf import PdfProcessor
+from ..platform_utils import modifier_label, open_in_file_manager, shortcut_bindings
 from ..router import KIND_LABELS, JobKind, file_dialog_types
 from ..textformat import export_text, safe_filename, segments_to_cues
 from .widgets import SettingsDialog, TextPanel
@@ -181,9 +181,12 @@ class MainWindow:
     def _build_menu(self) -> None:
         menu = tk.Menu(self.root)
         file_menu = tk.Menu(menu, tearoff=False)
-        file_menu.add_command(label="Добавить файлы…", command=self._ask_files, accelerator="Ctrl+O")
+        mod = modifier_label()
         file_menu.add_command(
-            label="Сохранить результат…", command=self._save_as, accelerator="Ctrl+S"
+            label="Добавить файлы…", command=self._ask_files, accelerator=f"{mod}+O"
+        )
+        file_menu.add_command(
+            label="Сохранить результат…", command=self._save_as, accelerator=f"{mod}+S"
         )
         file_menu.add_separator()
         file_menu.add_command(label="Выход", command=self._on_close)
@@ -202,8 +205,10 @@ class MainWindow:
         self.root.configure(menu=menu)
 
     def _setup_shortcuts(self) -> None:
-        self.root.bind("<Control-o>", lambda _event: self._ask_files())
-        self.root.bind("<Control-s>", lambda _event: self._save_as())
+        for sequence in shortcut_bindings("o"):
+            self.root.bind(sequence, lambda _event: self._ask_files())
+        for sequence in shortcut_bindings("s"):
+            self.root.bind(sequence, lambda _event: self._save_as())
         self.root.bind("<F5>", lambda _event: self._start())
 
     def _setup_dnd(self) -> None:
@@ -330,7 +335,7 @@ class MainWindow:
         except OSError as exc:
             messagebox.showerror("Папка результатов", str(exc), parent=self.root)
             return
-        os.startfile(str(directory))
+        open_in_file_manager(directory)
 
     def _copy(self) -> None:
         text = self._content_text()

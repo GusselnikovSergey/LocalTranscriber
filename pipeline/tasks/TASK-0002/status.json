@@ -1,0 +1,27 @@
+{
+  "id": "TASK-0002",
+  "title": "Сборка приложения под macOS через GitHub Actions",
+  "stage": "verification",
+  "created": "2026-11-13T20:12:01+03:00",
+  "updated": "2026-11-13T20:30:00+03:00",
+  "iterations": 1,
+  "max_iterations": 3,
+  "priority": "medium",
+  "type": "feature",
+  "risk": "normal",
+  "mode": "improvement",
+  "stack": "Python 3.14 + faster-whisper (CPU int8) + Tkinter + OCR (RapidOCR/Tesseract) + PyMuPDF",
+  "repo": "",
+  "baseline": "",
+  "customer": "Сергей",
+  "project_root": "C:\\Users\\Сергей\\Documents\\Проект по умолчанию\\projects\\LocalTranscriber",
+  "project_name": "LocalTranscriber",
+  "verdict": "pending",
+  "branch": "",
+  "approval": {
+    "plan": "approved",
+    "by": "Сергей",
+    "date": "2026-11-13T20:14:24+03:00",
+    "comment": "Вариант 1: сборка под macOS через GitHub Actions"
+  }
+}

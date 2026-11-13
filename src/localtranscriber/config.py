@@ -1,10 +1,11 @@
-"""Настройки приложения и стандартные пути Windows."""
+"""Настройки приложения и стандартные пути для Windows, macOS и Linux."""
 
 from __future__ import annotations
 
 import json
 import logging
 import os
+import sys
 import tempfile
 from dataclasses import dataclass, field, fields
 from pathlib import Path
@@ -38,13 +39,29 @@ def _env_dir(variable: str, fallback: Path) -> Path:
     return Path(value) if value else fallback
 
 
+def _is_macos() -> bool:
+    return sys.platform == "darwin"
+
+
 def appdata_dir() -> Path:
-    """Каталог настроек: %APPDATA%\\LocalTranscriber."""
+    """Каталог настроек.
+
+    Windows: ``%APPDATA%\\LocalTranscriber``;
+    macOS: ``~/Library/Application Support/LocalTranscriber``.
+    """
+    if _is_macos():
+        return Path.home() / "Library" / "Application Support" / APP_NAME
     return _env_dir("APPDATA", Path.home() / "AppData" / "Roaming") / APP_NAME
 
 
 def localappdata_dir() -> Path:
-    """Каталог данных: %LOCALAPPDATA%\\LocalTranscriber."""
+    """Каталог данных (модели, кэш).
+
+    Windows: ``%LOCALAPPDATA%\\LocalTranscriber``;
+    macOS: ``~/Library/Application Support/LocalTranscriber``.
+    """
+    if _is_macos():
+        return Path.home() / "Library" / "Application Support" / APP_NAME
     return _env_dir("LOCALAPPDATA", Path.home() / "AppData" / "Local") / APP_NAME
 
 
@@ -53,6 +70,9 @@ def models_dir() -> Path:
 
 
 def logs_dir() -> Path:
+    """Каталог логов: на macOS принято держать их отдельно от данных."""
+    if _is_macos():
+        return Path.home() / "Library" / "Logs" / APP_NAME
     return localappdata_dir() / "logs"
 
 

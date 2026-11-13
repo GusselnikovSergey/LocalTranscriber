@@ -1,0 +1,50 @@
+name: macOS build
+
+# Сборка .app для macOS на раннере GitHub Actions (Mac не нужен).
+# Запуск: вкладка Actions → macOS build → Run workflow.
+# Артефакт: LocalTranscriber-macos-arm64 (zip с LocalTranscriber.app).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest==9.2.0 ruff==0.17.5 mypy==2.4.1 pyinstaller==6.22.3
+
+      - name: Tests, lint, types
+        run: |
+          python -m pytest -o addopts="" -q
+          python -m ruff check .
+          python -m mypy src
+
+      - name: Build .app
+        env:
+          LT_NO_VENV: "1"
+        run: bash scripts/build_mac.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalTranscriber-macos-arm64
+          path: dist/LocalTranscriber-macos.zip
+          if-no-files-found: error

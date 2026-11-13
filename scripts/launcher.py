@@ -6,10 +6,14 @@
 Диагностика сборки: ``LocalTranscriber.exe --selftest отчёт.json файл1 файл2 …``
 прогоняет указанные файлы теми же движками и пишет JSON-отчёт (используется при
 сборке, чтобы проверить, что библиотеки распознавания попали в пакет).
+
+Быстрая проверка без моделей: ``--diagnose отчёт.json`` — импортирует движки и
+пишет их версии (так CI проверяет сборку на macOS, где модели ещё не скачаны).
 """
 
 from __future__ import annotations
 
+import importlib
 import json
 import multiprocessing
 import sys
@@ -18,6 +22,42 @@ import traceback
 from pathlib import Path
 
 from localtranscriber.app import main
+
+
+def run_diagnose(out: Path) -> int:
+    """Импортирует тяжёлые библиотеки и пишет JSON: ловит отсутствующие dylib."""
+    modules = (
+        "faster_whisper",
+        "ctranslate2",
+        "onnxruntime",
+        "av",
+        "pymupdf",
+        "PIL",
+        "numpy",
+        "rapidocr",
+        "tkinter",
+        "tkinterdnd2",
+    )
+    items: list[dict[str, object]] = []
+    ok = True
+    for name in modules:
+        item: dict[str, object] = {"module": name}
+        try:
+            module = importlib.import_module(name)
+            item["version"] = str(getattr(module, "__version__", "") or "")
+        except Exception as exc:  # noqa: BLE001 - отчёт должен собраться полностью
+            ok = False
+            item["error"] = f"{type(exc).__name__}: {exc}"
+        items.append(item)
+    payload: dict[str, object] = {
+        "frozen": bool(getattr(sys, "frozen", False)),
+        "python": sys.version.split()[0],
+        "platform": sys.platform,
+        "ok": ok,
+        "items": items,
+    }
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return 0 if ok else 1
 
 
 def run_selftest(paths: list[str], out: Path) -> int:
@@ -64,6 +104,10 @@ def run_selftest(paths: list[str], out: Path) -> int:
 
 
 def run() -> int:
+    if "--diagnose" in sys.argv:
+        index = sys.argv.index("--diagnose")
+        rest = sys.argv[index + 1 :]
+        return run_diagnose(Path(rest[0]) if rest else Path("diagnose.json"))
     if "--selftest" in sys.argv:
         index = sys.argv.index("--selftest")
         rest = sys.argv[index + 1 :]

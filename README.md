@@ -145,6 +145,40 @@ python -m venv .venv
 записи речи. Модели в сборку не входят — они скачиваются при первом запуске.
 Размер папки ≈500 МБ (ONNX Runtime, CTranslate2, PyAV, PyMuPDF).
 
+### macOS
+
+PyInstaller не умеет кросс-компиляцию, поэтому `.app` собирается **на macOS**.
+Два пути:
+
+**1. GitHub Actions (Mac не нужен).** Вкладка **Actions** → **macOS build** →
+**Run workflow**. Через ~20 минут в артефактах появится
+`LocalTranscriber-macos-arm64` (zip с `LocalTranscriber.app`). Сборка под
+Apple Silicon; workflow также прогоняет тесты, `ruff` и `mypy`.
+
+**2. На своём Mac** (нужен Xcode Command Line Tools: `xcode-select --install`):
+
+```bash
+cd LocalTranscriber
+bash scripts/build_mac.sh      # dist/LocalTranscriber.app + zip
+open dist/LocalTranscriber.app
+```
+
+**Первый запуск неподписанного приложения:** правый клик по `LocalTranscriber.app` →
+**Открыть** → **Открыть**. Обычный двойной клик macOS заблокирует (приложение подписано
+ad-hoc, без Apple Developer ID). Если приложение скачано из интернета и не открывается:
+`xattr -dr com.apple.quarantine /путь/к/LocalTranscriber.app`.
+
+Пути на macOS:
+
+| Что | Где |
+|---|---|
+| Настройки | `~/Library/Application Support/LocalTranscriber/settings.json` |
+| Модели | `~/Library/Application Support/LocalTranscriber/models` |
+| Логи | `~/Library/Logs/LocalTranscriber/app.log` |
+| Результаты | `~/Documents/LocalTranscriber` |
+
+Запуск из исходников: `bash scripts/run.sh`.
+
 Структура:
 
 ```text
@@ -152,13 +186,14 @@ src/localtranscriber/
 ├── app.py                 точка входа, окно
 ├── audio.py               декодирование через PyAV
 ├── cancellation.py        токен отмены задания
-├── config.py              настройки и пути
+├── config.py              настройки и пути (Windows/macOS)
 ├── errors.py              доменные исключения с понятными сообщениями
 ├── jobs.py                очередь, фоновый поток, пульс прогресса
 ├── logging_setup.py       логи с ротацией
 ├── models_setup.py        загрузка моделей с прогрессом и отменой
 ├── network.py             HTTP-обёртка (системное хранилище сертификатов)
 ├── pdf.py                 текстовый слой + OCR страниц
+├── platform_utils.py      открыть папку, горячие клавиши (Ctrl/Cmd)
 ├── router.py              тип файла → движок
 ├── textformat.py          абзацы, srt/vtt/json
 ├── engines/               whisper_engine.py, ocr_engine.py, base.py
@@ -168,4 +203,5 @@ src/localtranscriber/
 ## Ограничения
 
 - Нет диаризации (кто говорил) и потокового распознавания с микрофона.
-- Только Windows и только русский/английский интерфейс.
+- Интерфейс русский; распознавание — русский/английский + автоопределение.
+- Сборки: Windows (x64) и macOS (Apple Silicon). Интерфейс на Linux не проверялся.
